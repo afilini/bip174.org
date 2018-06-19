@@ -1,0 +1,47 @@
+$background: #f5f5f5;
+
+body {
+  background: $background;
+  padding: 0;
+}
+
+body > .container-fluid {
+    padding: 0;
+}
+
+.red-bg {
+    background: red;
+}
+
+.green-bg {
+    background: green;
+}
+
+textarea, input[type=text], select {
+    width: 100%;
+    word-break: break-all;
+}
+
+.header {
+    font-size: 1.2em;
+    font-weight: bold;
+    word-break: break-word;
+}
+
+.map-container > .row:not(:first-of-type) {
+    padding-top: .5rem;
+}
+
+.btn-height-stretch {
+    height: 100%;
+}
+
+textarea.no-scroll {
+    height: 100% !important;
+    overflow: hidden;
+    resize: none;
+}
+
+div.map-row > div.column > div.row, div.map-row div.form-floating {
+    height: 100%;
+}
