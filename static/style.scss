@@ -3,3 +3,8 @@ $background: #f5f5f5;
 body {
   background: $background;
 }
+
+#psbtInput {
+    height: 5em;
+    max-height: 10em;
+}
