@@ -11,7 +11,7 @@ jobs:
           toolchain: stable
       - name: Run fmt
         run: cargo fmt -- --check
-      - name: Run clippy
-        run: cargo clippy -- --deny=warnings
+          # - name: Run clippy
+          #   run: cargo clippy -- --deny=warnings
       - name: Run check
         run: cargo check
