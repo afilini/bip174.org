@@ -10,7 +10,7 @@ module.exports = (env, argv) => {
       compress: argv.mode === 'production',
       port: 8000
     },
-    entry: './bootstrap.js',
+    entry: './entry.js',
     output: {
       path: distPath,
       filename: "todomvc.js",
@@ -25,6 +25,14 @@ module.exports = (env, argv) => {
             'css-loader',
             'sass-loader',
           ],
+        },
+        {
+          test: /\.css$/,
+          use: ['style-loader', 'css-loader']
+        },
+        {
+          test: /\.(jpg|jpeg|png|woff|woff2|eot|ttf|svg)$/,
+          loader: 'url-loader?limit=100000'
         },
       ],
     },

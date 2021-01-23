@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+        <link href="/node_modules/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+        <style>
+            body {
+                background: #f5f5f5;
+            }
+
+            @media (max-width: 767.98px) {
+                #networkMenuContent {
+                    width: 100%;
+                }
+            }
+
+            #psbtInput {
+                height: 5em;
+                max-height: 10em;
+            }
+
+            @font-face {
+              font-family: "bootstrap-icons";
+              src: url("/node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff?5813790c1ebd573b51a03ec84367082a") format("woff"),
+                   url("/node_modules/bootstrap-icons/font/fonts/bootstrap-icons.woff2?5813790c1ebd573b51a03ec84367082a") format("woff2");
+            }
+        </style>
+
+        <title>BIP 174</title>
+    </head>
+    <body>
+        <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
+          <div class="container-fluid">
+            <a class="navbar-brand" href="#">BIP 174</a>
+
+              <div class="btn-group me-2 d-block d-md-none position-absolute" style="right: 72px" role="group" aria-label="First group">
+                  <button type="button" class="btn btn-outline-light"><i class="bi bi-arrows-expand"></i></button><button type="button" class="btn btn-outline-light"><i class="bi bi-pencil"></i></button><button type="button" class="btn btn-outline-light"><i class="bi bi-ui-checks"></i></button>
+              </div>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+              <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                <li class="nav-item">
+                  <a class="nav-link active" aria-current="page" href="#">Home</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="#">About</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="#">Support</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="#" tabindex="-1">GitHub</a>
+                </li>
+              </ul>
+
+              <div class="btn-group me-2 d-none d-md-block" role="group" aria-label="First group">
+                  <button type="button" class="btn btn-outline-light"><i class="bi bi-arrows-expand"></i></button><button type="button" class="btn btn-outline-light"><i class="bi bi-pencil"></i></button><button type="button" class="btn btn-outline-light"><i class="bi bi-ui-checks"></i></button>
+              </div>
+
+              <div class="dropdown">
+                <button class="btn btn-primary dropdown-toggle" type="button" id="networkMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                  Mainnet
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" id="networkMenuContent" aria-labelledby="networkMenu">
+                  <li><a class="dropdown-item active">Mainnet</a></li>
+                  <li><a class="dropdown-item">Testnet</a></li>
+
+                  <li><hr class="dropdown-divider"></li>
+
+                  <li><div class="dropdown-item">
+                    <label for="customEndpoint" class="form-label">Custom</label>
+                    <input type="text" placeholder="http://localhost:5000/api" id="customEndpoint" class="form-control" aria-describedby="customEndpointHelp">
+
+                    <div id="customEndpointHelp" class="form-text text-white">
+                      Select a local or custom Esplora endpoint
+                    </div>
+                   </div></li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
+        </nav>
+
+        <div class="container pb-3">
+            <h2 class="my-3">Bitcoin PSBT Explorer</h2>
+
+            <div class="form-floating">
+                <textarea id="psbtInput" class="form-control"></textarea>
+                <label for="psbtInput">PSBT</label>
+            </div>
+
+            <div class="d-flex flex-wrap">
+                <div class="col-12 col-md-6 order-first">
+                    <h2 class="my-3">Inputs</h2>
+
+                    <div class="card mb-3 position-relative">
+                        <span class="position-absolute top-0 start-100 translate-middle text-success fs-5"><i class="bi bi-check-circle-fill"></i></span>
+
+                        <div class="card-header d-flex justify-content-between flex-wrap">
+                            <div class="col-12 col-md-9 d-flex">
+                                <span class="fw-light pe-1">#0</span>
+                                <a class="text-break" href="#">f61b1742ca13176464adb3cb66050c00787bb3a4eead37e985f2df1e37718126:0</a>
+                            </div>
+                            <span class="offset-1 col-11 offset-md-0 col-md-3 text-end">2.00000000 BTC</span>
+
+                            <!-- <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                              <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                            </ul> -->
+                        </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">Previous UTXO</span>
+                          <div class="col-7 font-monospace">
+                                <span class="text-muted">Witness</span>
+                                <i class="bi bi-dot"></i>
+                                <span>Legacy</span>
+                          </div>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">Partial Signatures</span>
+                          <span class="col-7 font-monospace">2</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">BIP32 Key Paths</span>
+                          <span class="col-7 font-monospace">3</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">SigHash Type</span>
+                          <span class="col-7 font-monospace text-muted">default</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">Finalized</span>
+                          <span class="col-7 font-monospace">false</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">Spending Script</span>
+                          <div class="col-7 font-monospace">
+                                <span class="text-muted">Witness</span>
+                                <i class="bi bi-dot"></i>
+                                <span>Legacy</span>
+                          </div>
+                      </div>
+                    </div>
+
+                    <div class="card mb-3 position-relative">
+                        <span class="position-absolute top-0 start-100 translate-middle text-danger fs-5"><i class="bi bi-x-circle-fill"></i></span>
+
+                        <div class="card-header d-flex flex-wrap">
+                            <span class="col-1 fw-light">#1</span>
+                            <span class="col-11 col-md-8"><a href="#">614a0b61e0793dbb0a93c9e07f6e64b14ab3b3fbdc4ba85f952f0d67286c3298:0</a></span>
+                            <span class="offset-1 col-11 offset-md-0 col-md-3 text-end">0.03153000 BTC</span>
+                        </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">Previous UTXO</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">Witness</span>
+                          <span class="col-7 font-monospace text-muted">none</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">Legacy</span>
+                          <span class="col-7 font-monospace">010000000198326c28670d2f955fa84bdcfbb3b34ab1646e7fe0c9930abb3d79e0610b4a61000000006a473044022000e1969b4ea7e1efd9e0711ca98e17217d26207dc9763d9d37122ac4043f985f0220105f165bfd9460f356d3507b4f5861d81571e95fb6f2a404e4b6a23d522a3b2f0121027e4430ab5a68c89dd6790c6f3e788c940950f48809b9794dd27fda11d1f3d537ffffffff028dfe0300000000001976a9141236c54cf894137c6d656162bcc2f0947ee4bca988ac24a720000000000017a914a5fc054ca1f8f8be0e524ca0447e2733eb8acaac8700000000</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">Partial Signatures</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">027e4430ab5a68c89dd6790c6f3e788c940950f48809b9794dd27fda11d1f3d537</span>
+                          <span class="col-7 font-monospace">3044022000e1969b4ea7e1efd9e0711ca98e17217d26207dc9763d9d37122ac4043f985f0220105f165bfd9460f356d3507b4f5861d81571e95fb6f2a404e4b6a23d522a3b2f01</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">027e4430ab5a68c89dd6790c6f3e788c940950f48809b9794dd27fda11d1f3d537</span>
+                          <span class="col-7 font-monospace">3044022000e1969b4ea7e1efd9e0711ca98e17217d26207dc9763d9d37122ac4043f985f0220105f165bfd9460f356d3507b4f5861d81571e95fb6f2a404e4b6a23d522a3b2f01</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">027e4430ab5a68c89dd6790c6f3e788c940950f48809b9794dd27fda11d1f3d537</span>
+                          <div class="col-7 form-floating">
+                            <textarea class="form-control p-1 font-monospace"  style="overflow: hidden;">3044022000e1969b4ea7e1efd9e0711ca98e17217d26207dc9763d9d37122ac4043f985f0220105f165bfd9460f356d3507b4f5861d81571e95fb6f2a404e4b6a23d522a3b2f01</textarea>
+                          </div>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">BIP32 Key Paths</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">74baf9a1</span>
+                          <span class="col-7 font-monospace">m/84'/0'/0'/0/5</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">1fb3a294</span>
+                          <span class="col-7 font-monospace">m/84'/1'/0'/0/5</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">abe02daf</span>
+                          <span class="col-7 font-monospace">m/84'/2'/0'/0/5</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">SigHash Type</span>
+                          <span class="col-7 font-monospace text-muted">default</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">Finalized</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">Script Sig</span>
+                          <span class="col-7 font-monospace text-muted">none</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">Witness</span>
+                          <span class="col-7 font-monospace text-muted">none</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 fw-bold">Spending Script</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">Witness</span>
+                          <span class="col-7 font-monospace text-muted">none</span>
+                      </div>
+                      <div class="card-body py-2 d-flex">
+                          <span class="col-5 px-3 font-monospace">Legacy</span>
+                          <span class="col-7 font-monospace">1600149cbf3909b24b660404efe55034b76b42ab8ea0b5</span>
+                      </div>
+                    </div>
+
+
+                </div>
+
+                <div class="align-self-center text-center col-1 d-none d-md-block" style="padding-top: 4.4em;">
+                    <h1><i class="bi bi-chevron-right"></i></h1>
+                </div>
+                <div class="mt-3 align-self-center text-center col-12 d-block d-md-none">
+                    <h1 class="m-0"><i class="bi bi-chevron-down"></i></h1>
+                </div>
+
+
+                <div class="col-12 col-md-5 order-last">
+                    <h2 class="my-3 text-md-end">Outputs</h2>
+
+                    <div class="card">
+                      <div class="card-body">
+                        This is some text within a card body.
+                      </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+    </body>
+</html>

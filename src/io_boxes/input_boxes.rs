@@ -1,3 +1,6 @@
+#![allow(unused_imports)]
+use log::*;
+
 use bitcoin::hash_types::Txid;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::psbt::Input;
@@ -5,6 +8,11 @@ use bitcoin::{OutPoint, PublicKey, Script, Transaction, TxIn, TxOut};
 use std::collections::BTreeMap;
 use yew::prelude::*;
 
+use crate::app::WeakComponentLink;
+
+use super::IOBoxMsg;
+
+#[derive(Clone, Debug)]
 pub struct InputBox {
     txid: Txid,
     vout: u32,
@@ -23,13 +31,15 @@ pub struct InputBox {
 pub struct InputProps {
     pub input: Input,
     pub txin: TxIn,
+
+    pub weak_link: WeakComponentLink<InputBox>,
 }
 
 impl Component for InputBox {
-    type Message = ();
+    type Message = IOBoxMsg;
     type Properties = InputProps;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let value = if let Some(utxo) = &props.input.witness_utxo {
             Some(utxo.value)
         } else if let Some(utxo) = &props.input.non_witness_utxo {
@@ -41,6 +51,8 @@ impl Component for InputBox {
         };
 
         let OutPoint { txid, vout } = props.txin.previous_output;
+
+        *props.weak_link.borrow_mut() = Some(link);
 
         InputBox {
             txid,
@@ -61,7 +73,11 @@ impl Component for InputBox {
         false
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        match msg {
+            IOBoxMsg::ToggleExpand(status) => info!("toggle expand to {}", status),
+        }
+
         true
     }
 

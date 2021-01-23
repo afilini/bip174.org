@@ -1,7 +1,8 @@
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 
 mod app;
 mod io_boxes;
+mod navbar;
 
 use wasm_bindgen::prelude::*;
 

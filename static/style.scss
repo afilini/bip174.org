@@ -4,7 +4,19 @@ body {
   background: $background;
 }
 
+@media (max-width: 767.98px) {
+    #networkMenuContent {
+        width: 100%;
+    }
+}
+
 #psbtInput {
     height: 5em;
     max-height: 10em;
+    word-break: break-all;
+}
+
+.mobile-btns {
+    right: 72px;
+    top: 8px;
 }
