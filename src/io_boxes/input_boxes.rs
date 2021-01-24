@@ -14,6 +14,9 @@ use super::IOBoxMsg;
 
 #[derive(Clone, Debug)]
 pub struct InputBox {
+    is_expanded: bool,
+    index: usize,
+
     txid: Txid,
     vout: u32,
     value: Option<u64>,
@@ -31,6 +34,8 @@ pub struct InputBox {
 pub struct InputProps {
     pub input: Input,
     pub txin: TxIn,
+
+    pub index: usize,
 
     pub weak_link: WeakComponentLink<InputBox>,
 }
@@ -55,6 +60,9 @@ impl Component for InputBox {
         *props.weak_link.borrow_mut() = Some(link);
 
         InputBox {
+            is_expanded: false,
+            index: props.index,
+
             txid,
             vout,
             value,
@@ -75,7 +83,7 @@ impl Component for InputBox {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            IOBoxMsg::ToggleExpand(status) => info!("toggle expand to {}", status),
+            IOBoxMsg::ToggleExpand(status) => self.is_expanded = status,
         }
 
         true
@@ -83,12 +91,48 @@ impl Component for InputBox {
 
     fn view(&self) -> Html {
         html! {
-            <div class="card">
-                { self.txid }
-                <br/>
-                { format!("{:?}", self.vout) }
-                <br/>
-                { format!("{:?}", self.value) }
+            <div class="card mb-3 position-relative">
+                // <span class="position-absolute top-0 start-100 translate-middle text-success fs-5"><i class="bi bi-check-circle-fill"></i></span> TODO
+
+                <div class="card-header d-flex justify-content-between flex-wrap">
+                    <div class="col-12 col-md-9 d-flex">
+                        <span class="fw-light pe-1">{ format!("#{}", self.index) }</span>
+                        <a class="text-break" href="#">{ format!("{}:{}", self.txid, self.vout ) }</a>
+                    </div>
+                    <span class="offset-1 col-11 offset-md-0 col-md-3 text-end">{ format!("{} BTC", self.value.map(|v| format!("{:.8}", (v as f32 * 1e-8))).unwrap_or("???".into())) }</span> // TODO: change unit
+                </div>
+              <div class="card-body py-2 d-flex">
+                  <span class="col-5 fw-bold">{ "Previous UTXO" }</span>
+                  <div class="col-7 font-monospace">
+                        <span class="text-muted">{ "Witness" }</span>
+                        <i class="bi bi-dot"></i>
+                        <span>{ "Legacy" }</span>
+                  </div>
+              </div>
+              <div class="card-body py-2 d-flex">
+                  <span class="col-5 fw-bold">{ "Partial Signatures" }</span>
+                  <span class="col-7 font-monospace">{ "2" }</span>
+              </div>
+              <div class="card-body py-2 d-flex">
+                  <span class="col-5 fw-bold">{ "BIP32 Key Paths" }</span>
+                  <span class="col-7 font-monospace">{ "3" }</span>
+              </div>
+              <div class="card-body py-2 d-flex">
+                  <span class="col-5 fw-bold">{ "SigHash Type" }</span>
+                  <span class="col-7 font-monospace text-muted">{ "default" }</span>
+              </div>
+              <div class="card-body py-2 d-flex">
+                  <span class="col-5 fw-bold">{ "Finalized" }</span>
+                  <span class="col-7 font-monospace">{ "false" }</span>
+              </div>
+              <div class="card-body py-2 d-flex">
+                  <span class="col-5 fw-bold">{ "Spending Script" }</span>
+                  <div class="col-7 font-monospace">
+                        <span class="text-muted">{ "Witness" }</span>
+                        <i class="bi bi-dot"></i>
+                        <span>{ "Legacy" }</span>
+                  </div>
+              </div>
             </div>
         }
     }

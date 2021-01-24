@@ -158,7 +158,7 @@ impl App {
 
     fn render_input_box(&self, input: &Input, txin: &TxIn, index: usize) -> Html {
         html! {
-            <InputBox: input=input, txin=txin, weak_link=&self.inputs[index]/>
+            <InputBox: index=index, input=input, txin=txin, weak_link=&self.inputs[index]/>
         }
     }
 
