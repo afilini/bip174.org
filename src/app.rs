@@ -2,19 +2,18 @@
 use log::*;
 
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::ops::Deref;
+use std::rc::Rc;
 
 use strum::IntoEnumIterator;
 use yew::prelude::*;
 
 use bitcoin::consensus::deserialize;
-use bitcoin::network::constants::Network;
 use bitcoin::util::psbt::{Input, Output, PartiallySignedTransaction};
 use bitcoin::{TxIn, TxOut};
 
-use crate::io_boxes::{InputBox, OutputBox, IOBoxMsg};
-use crate::navbar::Navbar;
+use crate::io_boxes::{IOBoxMsg, InputBox, OutputBox};
+use crate::navbar::{Navbar, NetworkSettings};
 
 #[derive(Clone, Debug)]
 pub struct WeakComponentLink<C: Component>(Rc<RefCell<Option<ComponentLink<C>>>>);
@@ -42,7 +41,7 @@ impl<C: Component> Default for WeakComponentLink<C> {
 pub struct App {
     link: ComponentLink<Self>,
     psbt: Option<Result<PartiallySignedTransaction, String>>,
-    network: Network,
+    network: NetworkSettings,
 
     inputs: Vec<WeakComponentLink<InputBox>>,
     outputs: Vec<WeakComponentLink<OutputBox>>,
@@ -53,6 +52,7 @@ pub enum Msg {
 
     ExpandBoxes(bool),
     EditMode(bool),
+    NetworkChanged(NetworkSettings),
 }
 
 impl Component for App {
@@ -63,8 +63,7 @@ impl Component for App {
         App {
             link,
             psbt: None,
-            // TODO
-            network: Network::Bitcoin,
+            network: NetworkSettings::default(),
 
             inputs: vec![],
             outputs: vec![],
@@ -86,12 +85,20 @@ impl Component for App {
                 self.psbt = Some(psbt);
 
                 if let Some(Ok(psbt)) = &self.psbt {
-                    self.inputs = psbt.inputs.iter().map(|_| WeakComponentLink::default()).collect();
-                    self.outputs = psbt.outputs.iter().map(|_| WeakComponentLink::default()).collect();
+                    self.inputs = psbt
+                        .inputs
+                        .iter()
+                        .map(|_| WeakComponentLink::default())
+                        .collect();
+                    self.outputs = psbt
+                        .outputs
+                        .iter()
+                        .map(|_| WeakComponentLink::default())
+                        .collect();
                 }
 
                 info!("{:?}", self.psbt);
-            },
+            }
             Msg::ExpandBoxes(status) => {
                 info!("expand_boxes={}, {:?}", status, self.inputs);
 
@@ -100,10 +107,14 @@ impl Component for App {
                         link.send_message(IOBoxMsg::ToggleExpand(status));
                     }
                 }
-            },
+            }
             Msg::EditMode(status) => {
                 info!("edit_mode={}, {:?}", status, self.inputs);
-            },
+            }
+            Msg::NetworkChanged(network) => {
+                info!("network_changed={:?}", network);
+                self.network = network;
+            }
         }
 
         true
@@ -112,14 +123,14 @@ impl Component for App {
     fn view(&self) -> Html {
         html! {
             <div>
-                <Navbar network=self.network, app_link=self.link.clone()/>
+                <Navbar network=self.network.clone() app_link=self.link.clone()/>
 
                 <div class="container pb-3">
                     <h2 class="my-3">{ "Bitcoin PSBT Explorer" }</h2>
 
                     { self.render_psbt_textarea() }
 
-                        { self.render_input_output_boxes() }
+                    { self.render_input_output_boxes() }
                 </div>
             </div>
         }
@@ -158,13 +169,13 @@ impl App {
 
     fn render_input_box(&self, input: &Input, txin: &TxIn, index: usize) -> Html {
         html! {
-            <InputBox: input=input, txin=txin, weak_link=&self.inputs[index]/>
+            <InputBox input=input txin=txin weak_link=&self.inputs[index]/>
         }
     }
 
     fn render_output_box(&self, output: &Output, txout: &TxOut) -> Html {
         html! {
-            <OutputBox: output=output, txout=txout, network=self.network/>
+            <OutputBox output=output txout=txout network=self.network.clone()/>
         }
     }
 
