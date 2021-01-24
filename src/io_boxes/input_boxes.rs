@@ -1,12 +1,12 @@
 #![allow(unused_imports)]
 use log::*;
 
+use bitcoin::consensus::encode::serialize_hex;
 use bitcoin::hash_types::Txid;
 use bitcoin::hashes::hex::ToHex;
-use bitcoin::consensus::encode::serialize_hex;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::psbt::Input;
-use bitcoin::{OutPoint, PublicKey, Script, Transaction, TxIn, TxOut, SigHashType};
+use bitcoin::{OutPoint, PublicKey, Script, SigHashType, Transaction, TxIn, TxOut};
 use std::collections::BTreeMap;
 use yew::prelude::*;
 
@@ -265,21 +265,35 @@ impl InputBox {
         let previous_utxo = BoxFieldGroup {
             title: "Previous UTXO",
             fields: vec![
-                ("Witness", self.witness_utxo.as_ref().map(|d| serialize_hex(d))),
-                ("Legacy", self.non_witness_utxo.as_ref().map(|d| serialize_hex(d))),
+                (
+                    "Witness",
+                    self.witness_utxo.as_ref().map(|d| serialize_hex(d)),
+                ),
+                (
+                    "Legacy",
+                    self.non_witness_utxo.as_ref().map(|d| serialize_hex(d)),
+                ),
             ],
         };
         let partial_sigs = BoxFieldMap {
             title: "Partial Signatures",
-            map: self.signatures.iter().map(|(k, v)| (k.to_string(), v.to_hex())).collect(),
+            map: self
+                .signatures
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_hex()))
+                .collect(),
         };
         let hd_keypaths = BoxFieldMap {
             title: "BIP32 Key Paths",
-            map: self.hd_keypaths.iter().map(|(k, (f, p))| (k.to_string(), format!("{} {}", f, p))).collect(),
+            map: self
+                .hd_keypaths
+                .iter()
+                .map(|(k, (f, p))| (k.to_string(), format!("{} {}", f, p)))
+                .collect(),
         };
         let sighash_type = BoxFieldSingle {
             title: "SigHash Type",
-            value: self.sighash_type.map(|s| s.to_string())
+            value: self.sighash_type.map(|s| s.to_string()),
         };
         let finalized = BoxFieldProperty {
             title: "Finalized",
@@ -288,12 +302,18 @@ impl InputBox {
         let spending_script = BoxFieldGroup {
             title: "Spending Script",
             fields: vec![
-                ("Witness", self.witness_script.as_ref().map(|d| serialize_hex(d))),
-                ("Legacy", self.redeem_script.as_ref().map(|d| serialize_hex(d))),
+                (
+                    "Witness",
+                    self.witness_script.as_ref().map(|d| serialize_hex(d)),
+                ),
+                (
+                    "Legacy",
+                    self.redeem_script.as_ref().map(|d| serialize_hex(d)),
+                ),
             ],
         };
 
-        html!{
+        html! {
             <div>
                 { previous_utxo.emit_html(false) }
 

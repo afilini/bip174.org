@@ -76,9 +76,21 @@ impl Navbar {
         let testnet_settings = NetworkSettings::Standard(bitcoin::Network::Testnet);
         let regtest_settings = NetworkSettings::Standard(bitcoin::Network::Regtest);
 
-        let mainnet_active = if &self.network == &mainnet_settings { "active" } else { "" };
-        let testnet_active = if &self.network == &testnet_settings { "active" } else { "" };
-        let regtest_active = if &self.network == &regtest_settings { "active" } else { "" };
+        let mainnet_active = if &self.network == &mainnet_settings {
+            "active"
+        } else {
+            ""
+        };
+        let testnet_active = if &self.network == &testnet_settings {
+            "active"
+        } else {
+            ""
+        };
+        let regtest_active = if &self.network == &regtest_settings {
+            "active"
+        } else {
+            ""
+        };
         html! {
           <div class="dropdown">
             <button class="btn btn-primary dropdown-toggle" type="button" id="networkMenu" data-bs-toggle="dropdown" aria-expanded="false">
