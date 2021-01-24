@@ -1,23 +1,24 @@
+use crate::navbar::NetworkSettings;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::psbt::Output;
-use bitcoin::{Network, PublicKey, Script, TxOut};
+use bitcoin::{Address, Network, PublicKey, Script, TxOut};
 use std::collections::BTreeMap;
 use yew::prelude::*;
 
 pub struct OutputBox {
-    pub address: Script,
+    pub script: Script,
     pub value: u64,
     pub hd_keypaths: BTreeMap<PublicKey, KeySource>,
     pub witness_script: Option<Script>,
     pub redeem_script: Option<Script>,
-    pub network: Network,
+    pub network: NetworkSettings,
 }
 
 #[derive(Properties, Clone, PartialEq)]
 pub struct OutputProps {
     pub output: Output,
     pub txout: TxOut,
-    pub network: Network,
+    pub network: NetworkSettings,
 }
 
 impl Component for OutputBox {
@@ -26,7 +27,7 @@ impl Component for OutputBox {
 
     fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
         OutputBox {
-            address: props.txout.script_pubkey,
+            script: props.txout.script_pubkey,
             value: props.txout.value,
             hd_keypaths: props.output.hd_keypaths,
             witness_script: props.output.witness_script,
@@ -35,8 +36,14 @@ impl Component for OutputBox {
         }
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        self.script = props.txout.script_pubkey;
+        self.value = props.txout.value;
+        self.hd_keypaths = props.output.hd_keypaths;
+        self.witness_script = props.output.witness_script;
+        self.redeem_script = props.output.redeem_script;
+        self.network = props.network;
+        true
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
@@ -46,7 +53,13 @@ impl Component for OutputBox {
     fn view(&self) -> Html {
         html! {
             <div class="card">
-                { format!("{:?}", self.address) }
+            {
+                if let Some(a) = Address::from_script(&self.script, *self.network) {
+                  format!("{:?}", a)
+                } else {
+                  format!("{:?}", self.script)
+                }
+            }
             </div>
         }
     }
