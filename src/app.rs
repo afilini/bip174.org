@@ -85,16 +85,10 @@ impl Component for App {
                 self.psbt = Some(psbt);
 
                 if let Some(Ok(psbt)) = &self.psbt {
-                    self.inputs = psbt
-                        .inputs
-                        .iter()
-                        .map(|_| WeakComponentLink::default())
-                        .collect();
-                    self.outputs = psbt
-                        .outputs
-                        .iter()
-                        .map(|_| WeakComponentLink::default())
-                        .collect();
+                    self.inputs
+                        .resize_with(psbt.inputs.len(), || WeakComponentLink::default());
+                    self.outputs
+                        .resize_with(psbt.outputs.len(), || WeakComponentLink::default());
                 }
 
                 info!("{:?}", self.psbt);
