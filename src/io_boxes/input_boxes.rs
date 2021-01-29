@@ -12,11 +12,12 @@ use yew::prelude::*;
 
 use crate::app::WeakComponentLink;
 
-use super::{BoxField, BoxFieldValue, IOBoxMsg};
+use super::{BoxField, BoxFieldValue};
 
 #[derive(Clone, Debug)]
 pub struct InputBox {
     is_expanded: bool,
+    is_editable: bool,
     index: usize,
 
     txid: Txid,
@@ -38,6 +39,8 @@ pub struct InputProps {
     pub input: Input,
     pub txin: TxIn,
 
+    pub is_expanded: bool,
+    pub is_editable: bool,
     pub index: usize,
 
     pub weak_link: WeakComponentLink<InputBox>,
@@ -60,7 +63,7 @@ impl InputProps {
 }
 
 impl Component for InputBox {
-    type Message = IOBoxMsg;
+    type Message = ();
     type Properties = InputProps;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
@@ -69,7 +72,8 @@ impl Component for InputBox {
         let OutPoint { txid, vout } = props.txin.previous_output;
 
         InputBox {
-            is_expanded: false,
+            is_expanded: props.is_expanded,
+            is_editable: props.is_editable,
             index: props.index,
 
             txid,
@@ -90,6 +94,8 @@ impl Component for InputBox {
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
         let OutPoint { txid, vout } = props.txin.previous_output;
 
+        self.is_expanded = props.is_expanded;
+        self.is_editable = props.is_editable;
         self.index = props.index;
         self.txid = txid;
         self.vout = vout;
@@ -107,11 +113,7 @@ impl Component for InputBox {
         true
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        match msg {
-            IOBoxMsg::ToggleExpand(status) => self.is_expanded = status,
-        }
-
+    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
         true
     }
 

@@ -12,7 +12,7 @@ use bitcoin::consensus::deserialize;
 use bitcoin::util::psbt::{Input, Output, PartiallySignedTransaction};
 use bitcoin::{TxIn, TxOut};
 
-use crate::io_boxes::{IOBoxMsg, InputBox, OutputBox};
+use crate::io_boxes::{InputBox, OutputBox};
 use crate::navbar::{Navbar, NetworkSettings};
 
 #[derive(Clone, Debug)]
@@ -43,6 +43,9 @@ pub struct App {
     psbt: Option<Result<PartiallySignedTransaction, String>>,
     network: NetworkSettings,
 
+    is_expanded: bool,
+    is_editable: bool,
+
     inputs: Vec<WeakComponentLink<InputBox>>,
     outputs: Vec<WeakComponentLink<OutputBox>>,
 }
@@ -64,6 +67,9 @@ impl Component for App {
             link,
             psbt: None,
             network: NetworkSettings::default(),
+
+            is_expanded: false,
+            is_editable: false,
 
             inputs: vec![],
             outputs: vec![],
@@ -94,16 +100,12 @@ impl Component for App {
                 info!("{:?}", self.psbt);
             }
             Msg::ExpandBoxes(status) => {
-                info!("expand_boxes={}, {:?}", status, self.inputs);
-
-                for link in &self.inputs {
-                    if let Some(link) = link.borrow().deref() {
-                        link.send_message(IOBoxMsg::ToggleExpand(status));
-                    }
-                }
+                info!("expand_boxes={}", status);
+                self.is_expanded = status;
             }
             Msg::EditMode(status) => {
-                info!("edit_mode={}, {:?}", status, self.inputs);
+                info!("edit_mode={}", status);
+                self.is_editable = status;
             }
             Msg::NetworkChanged(network) => {
                 info!("network_changed={:?}", network);
@@ -163,7 +165,12 @@ impl App {
 
     fn render_input_box(&self, input: &Input, txin: &TxIn, index: usize) -> Html {
         html! {
-            <InputBox index=index input=input txin=txin weak_link=&self.inputs[index]/>
+            <InputBox index=index
+                input=input
+                txin=txin
+                weak_link=&self.inputs[index]
+                is_expanded=self.is_expanded
+                is_editable=self.is_editable/>
         }
     }
 
