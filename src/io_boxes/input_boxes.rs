@@ -12,7 +12,7 @@ use yew::prelude::*;
 
 use crate::app::WeakComponentLink;
 
-use super::IOBoxMsg;
+use super::{BoxField, BoxFieldValue, IOBoxMsg};
 
 #[derive(Clone, Debug)]
 pub struct InputBox {
@@ -129,203 +129,75 @@ impl Component for InputBox {
                 </div>
 
                 {
-                    if self.is_expanded {
-                        html!{}
-                    } else {
-                        self.emit_short_body()
-                    }
+                    self.emit_body()
                 }
             </div>
         }
     }
 }
 
-struct BoxFieldGroup {
-    title: &'static str,
-    fields: Vec<(&'static str, Option<String>)>,
-}
-
-impl BoxFieldGroup {
-    fn emit_html(&self, is_expanded: bool) -> Html {
-        html! {
-              <div class="card-body py-2 d-flex">
-                  <span class="col-5 fw-bold">{ self.title }</span>
-
-                  <div class="col-7 font-monospace">
-                  { for self.fields.iter().enumerate().map(|(index, (title, opt))| {
-                        if is_expanded {
-                            html!{}
-                        } else {
-                            let class = match opt {
-                                Some(_) => "",
-                                None => "text-muted",
-                            };
-                            let separator = if index == 0 {
-                                html!{}
-                            } else {
-                                html!{ <i class="bi bi-dot"></i> }
-                            };
-
-                            html!{
-                                <span>
-                                    { separator }
-                                    <span class=class>{ title }</span>
-                                </span>
-                            }
-                        }
-                  }) }
-                  </div>
-              </div>
-        }
-    }
-}
-
-struct BoxFieldSingle {
-    title: &'static str,
-    value: Option<String>,
-}
-
-impl BoxFieldSingle {
-    fn emit_html(&self, is_expanded: bool) -> Html {
-        html! {
-              <div class="card-body py-2 d-flex">
-                  <span class="col-5 fw-bold">{ self.title }</span>
-
-                  <div class="col-7 font-monospace">
-                  {
-                      if is_expanded {
-                          html! {}
-                      } else {
-                          let class = match &self.value {
-                              Some(_) => "",
-                              None => "text-muted",
-                          };
-
-                          html! { <span class=class>{ self.value.as_ref().unwrap_or(&"default".to_string()) }</span> }
-                      }
-                  }
-                  </div>
-              </div>
-        }
-    }
-}
-
-struct BoxFieldProperty<P: ToString> {
-    title: &'static str,
-    property: P,
-}
-
-impl<P: ToString> BoxFieldProperty<P> {
-    fn emit_html(&self, is_expanded: bool) -> Html {
-        html! {
-              <div class="card-body py-2 d-flex">
-                  <span class="col-5 fw-bold">{ self.title }</span>
-
-                  <div class="col-7 font-monospace">
-                  {
-                      if is_expanded {
-                          html! {}
-                      } else {
-                          html! { <span>{ self.property.to_string() }</span> }
-                      }
-                  }
-                  </div>
-              </div>
-        }
-    }
-}
-
-struct BoxFieldMap {
-    title: &'static str,
-    map: BTreeMap<String, String>,
-}
-
-impl BoxFieldMap {
-    fn emit_html(&self, is_expanded: bool) -> Html {
-        html! {
-              <div class="card-body py-2 d-flex">
-                  <span class="col-5 fw-bold">{ self.title }</span>
-
-                  <div class="col-7 font-monospace">
-                  {
-                      if is_expanded {
-                          html! {}
-                      } else {
-                          html! { <span>{ self.map.len().to_string() }</span> }
-                      }
-                  }
-                  </div>
-              </div>
-        }
-    }
-}
-
 impl InputBox {
-    fn emit_short_body(&self) -> Html {
-        let previous_utxo = BoxFieldGroup {
-            title: "Previous UTXO",
-            fields: vec![
-                (
-                    "Witness",
-                    self.witness_utxo.as_ref().map(|d| serialize_hex(d)),
-                ),
-                (
-                    "Legacy",
-                    self.non_witness_utxo.as_ref().map(|d| serialize_hex(d)),
-                ),
-            ],
-        };
-        let partial_sigs = BoxFieldMap {
-            title: "Partial Signatures",
-            map: self
-                .signatures
-                .iter()
-                .map(|(k, v)| (k.to_string(), v.to_hex()))
-                .collect(),
-        };
-        let hd_keypaths = BoxFieldMap {
-            title: "BIP32 Key Paths",
-            map: self
-                .hd_keypaths
-                .iter()
-                .map(|(k, (f, p))| (k.to_string(), format!("{} {}", f, p)))
-                .collect(),
-        };
-        let sighash_type = BoxFieldSingle {
-            title: "SigHash Type",
-            value: self.sighash_type.map(|s| s.to_string()),
-        };
-        let finalized = BoxFieldProperty {
-            title: "Finalized",
-            property: self.final_script_sig.is_some() || self.final_script_witness.is_some(),
-        };
-        let spending_script = BoxFieldGroup {
-            title: "Spending Script",
-            fields: vec![
-                (
-                    "Witness",
-                    self.witness_script.as_ref().map(|d| serialize_hex(d)),
-                ),
-                (
-                    "Legacy",
-                    self.redeem_script.as_ref().map(|d| serialize_hex(d)),
-                ),
-            ],
-        };
-
+    fn emit_body(&self) -> Html {
         html! {
             <div>
-                { previous_utxo.emit_html(false) }
-
-                { partial_sigs.emit_html(false) }
-
-                { hd_keypaths.emit_html(false) }
-
-                { sighash_type.emit_html(false) }
-
-                { finalized.emit_html(false) }
-
-                { spending_script.emit_html(false) }
+                <BoxField title="Previous UTXO" expanded=self.is_expanded value=BoxFieldValue::Group({
+                    vec![
+                        (
+                            "Witness",
+                            self.witness_utxo.as_ref().map(|d| serialize_hex(d)),
+                        ),
+                        (
+                            "Legacy",
+                            self.non_witness_utxo.as_ref().map(|d| serialize_hex(d)),
+                        ),
+                    ]
+                })/>
+                <BoxField title="Partial Signatures" expanded=self.is_expanded value=BoxFieldValue::Map({
+                    self
+                        .signatures
+                        .iter()
+                        .map(|(k, v)| (k.to_string(), v.to_hex()))
+                        .collect()
+                })/>
+                <BoxField title="BIP32 Key Paths" expanded=self.is_expanded value=BoxFieldValue::Map({
+                    self
+                        .hd_keypaths
+                        .iter()
+                        .map(|(k, (f, p))| (format!("{}", f), format!("{}", p)))
+                        .collect()
+                })/>
+                <BoxField title="SigHash Type" expanded=self.is_expanded value=BoxFieldValue::Single({
+                    self.sighash_type.map(|s| s.to_string())
+                })/>
+                <BoxField title="Finalized" expanded=self.is_expanded value=BoxFieldValue::BooleanSummary({
+                    let mut map = BTreeMap::new();
+                    map.insert(
+                        "Script Sig",
+                        self.final_script_sig.as_ref().map(|s| serialize_hex(s)),
+                    );
+                    map.insert(
+                        "Witness",
+                        self.final_script_witness.as_ref().map(|w| {
+                            w.iter()
+                                .map(|v| serialize_hex(v))
+                                .collect::<Vec<_>>()
+                                .join(" ")
+                        }),
+                    );
+                    map
+                })/>
+                <BoxField title="Spending Script" expanded=self.is_expanded value=BoxFieldValue::Group({
+                    vec![
+                        (
+                            "Witness",
+                            self.witness_script.as_ref().map(|d| serialize_hex(d)),
+                        ),
+                        (
+                            "Legacy",
+                            self.redeem_script.as_ref().map(|d| serialize_hex(d)),
+                        ),
+                    ]
+                })/>
             </div>
         }
     }

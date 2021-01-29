@@ -1,7 +1,7 @@
 use crate::navbar::NetworkSettings;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::psbt::Output;
-use bitcoin::{Address, Network, PublicKey, Script, TxOut};
+use bitcoin::{Address, PublicKey, Script, TxOut};
 use std::collections::BTreeMap;
 use yew::prelude::*;
 
