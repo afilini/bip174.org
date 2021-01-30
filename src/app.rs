@@ -154,7 +154,7 @@ impl App {
                     <div class="col-12 col-md-5 order-last">
                         <h2 class="my-3 text-md-end">{ "Outputs" }</h2>
 
-                        { for psbt.outputs.iter().zip(psbt.global.unsigned_tx.output.iter()).map(|(o, txout)| self.render_output_box(o, txout) ) }
+                        { for psbt.outputs.iter().zip(psbt.global.unsigned_tx.output.iter()).enumerate().map(|(index, (o, txout))| self.render_output_box(o, txout, index) ) }
                     </div>
                 </div>
             }
@@ -174,9 +174,14 @@ impl App {
         }
     }
 
-    fn render_output_box(&self, output: &Output, txout: &TxOut) -> Html {
+    fn render_output_box(&self, output: &Output, txout: &TxOut, index: usize) -> Html {
         html! {
-            <OutputBox output=output txout=txout network=self.network.clone()/>
+            <OutputBox output=output
+                txout=txout
+                network=self.network.clone()
+                is_expanded=self.is_expanded
+                is_editable=self.is_editable
+                index=index/>
         }
     }
 
