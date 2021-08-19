@@ -18,6 +18,12 @@ use crate::fields::*;
 use crate::history::*;
 use crate::navbar::*;
 
+const EXAMPLE_PSBTS: [(&'static str, &'static str); 3] = [
+    ("One P2PKH input, outputs are empty", "cHNidP8BAHUCAAAAASaBcTce3/KF6Tet7qSze3gADAVmy7OtZGQXE8pCFxv2AAAAAAD+////AtPf9QUAAAAAGXapFNDFmQPFusKGh2DpD9UhpGZap2UgiKwA4fUFAAAAABepFDVF5uM7gyxHBQ8k0+65PJwDlIvHh7MuEwAAAQD9pQEBAAAAAAECiaPHHqtNIOA3G7ukzGmPopXJRjr6Ljl/hTPMti+VZ+UBAAAAFxYAFL4Y0VKpsBIDna89p95PUzSe7LmF/////4b4qkOnHf8USIk6UwpyN+9rRgi7st0tAXHmOuxqSJC0AQAAABcWABT+Pp7xp0XpdNkCxDVZQ6vLNL1TU/////8CAMLrCwAAAAAZdqkUhc/xCX/Z4Ai7NK9wnGIZeziXikiIrHL++E4sAAAAF6kUM5cluiHv1irHU6m80GfWx6ajnQWHAkcwRAIgJxK+IuAnDzlPVoMR3HyppolwuAJf3TskAinwf4pfOiQCIAGLONfc0xTnNMkna9b7QPZzMlvEuqFEyADS8vAtsnZcASED0uFWdJQbrUqZY3LLh+GFbTZSYG2YVi/jnF6efkE/IQUCSDBFAiEA0SuFLYXc2WHS9fSrZgZU327tzHlMDDPOXMMJ/7X85Y0CIGczio4OFyXBl/saiK9Z9R5E5CVbIBZ8hoQDHAXR8lkqASECI7cr7vCWXRC+B3jv7NYfysb3mk6haTkzgHNEZPhPKrMAAAAAAAAA"),
+    ("One P2SH-P2WSH input of a 2-of-2, with metadata", "cHNidP8BAFUCAAAAASeaIyOl37UfxF8iD6WLD8E+HjNCeSqF1+Ns1jM7XLw5AAAAAAD/////AaBa6gsAAAAAGXapFP/pwAYQl8w7Y28ssEYPpPxCfStFiKwAAAAAAAEBIJVe6gsAAAAAF6kUY0UgD2jRieGtwN8cTRbqjxTA2+uHIgIDsTQcy6doO2r08SOM1ul+cWfVafrEfx5I1HVBhENVvUZGMEMCIAQktY7/qqaU4VWepck7v9SokGQiQFXN8HC2dxRpRC0HAh9cjrD+plFtYLisszrWTt5g6Hhb+zqpS5m9+GFR25qaAQEEIgAgdx/RitRZZm3Unz1WTj28QvTIR3TjYK2haBao7UiNVoEBBUdSIQOxNBzLp2g7avTxI4zW6X5xZ9Vp+sR/HkjUdUGEQ1W9RiED3lXR4drIBeP4pYwfv5uUwC89uq/hJ/78pJlfJvggg71SriIGA7E0HMunaDtq9PEjjNbpfnFn1Wn6xH8eSNR1QYRDVb1GELSmumcAAACAAAAAgAQAAIAiBgPeVdHh2sgF4/iljB+/m5TALz26r+En/vykmV8m+CCDvRC0prpnAAAAgAAAAIAFAACAAAA="),
+    ("Revault Unvault TX", "cHNidP8BAIkCAAAAAV+HumeWIAtm1c9hvTgUme25aogn3EvF1+vV7KYKKKdYAAAAAAD9////AkANAwAAAAAAIgAgXA0s+qynDjinXOmpJ/Qhuj87xEB7YcLEVdz7OX5B+l8wdQAAAAAAACIAIKj/nBsC9abIRvrVxbaHRVSZNtMZjsOSosgybAbmDAtwAAAAAAABASuIlAMAAAAAACIAIKI1Ly2kCXvsF5kWmgyAGmH2th23XwgbIDHRo7sHndheAQMEAQAAAAEFR1IhAtk/sjHYB5gv7nUSr0k25UlmeCn+7ztrilD5aKBYhOZ/IQI+TfqYOB5AvGLZO2C3OWNepPtB2MXltlovJy9aNEUezFKuIgYCPk36mDgeQLxi2TtgtzljXqT7QdjF5bZaLycvWjRFHswIeMYQoQoAAAAiBgLZP7Ix2AeYL+51Eq9JNuVJZngp/u87a4pQ+WigWITmfwgbQV1zCgAAAAAAAA=="),
+];
+
 pub trait ParentMessage<T, X = ()> {
     fn build_message(data: T, tag: Option<X>) -> Self;
 }
@@ -35,6 +41,7 @@ pub struct App {
 #[derive(Debug)]
 pub enum AppMsg {
     SetNetwork(Network),
+    SetPsbt(&'static str),
 
     Undo,
     Redo,
@@ -65,6 +72,9 @@ impl Component for App {
 
         match msg {
             AppMsg::SetNetwork(network) => self.network = network,
+            AppMsg::SetPsbt(psbt) => send_psbt_message(PsbtMessage::ChangePsbt(
+                PartiallySignedTransaction::from_str(psbt).ok(),
+            )),
             AppMsg::Undo => send_psbt_message(PsbtMessage::Undo),
             AppMsg::Redo => send_psbt_message(PsbtMessage::Redo),
         }
@@ -78,7 +88,21 @@ impl Component for App {
                 <Navbar network=self.network parent=self.link.clone() />
 
                 <Container>
-                    <h2 class="my-3">{ "Bitcoin PSBT Explorer" }</h2>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="my-3">{ "Bitcoin PSBT Explorer" }</h2>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="examplesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                { "Examples "}
+                            </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="examplesDropdown">
+                                    {
+                                        for EXAMPLE_PSBTS.iter().map(|(label, psbt)| html! {
+                                                <li><a class="dropdown-item" onclick=self.link.callback(move |_| AppMsg::SetPsbt(psbt))>{ label }</a></li>
+                                        })
+                                    }
+                                </ul>
+                        </div>
+                    </div>
 
                     <Psbt network=self.network self_link=WeakComponentLink(Rc::clone(&self.psbt.0)) />
                 </Container>
