@@ -5,12 +5,13 @@ use std::ops::Deref;
 use std::rc::Rc;
 use std::str::FromStr;
 
+#[allow(unused_imports)]
 use log::*;
 use yew::prelude::*;
 
 use bitcoin::util::bip32;
 use bitcoin::util::psbt::{self, PartiallySignedTransaction};
-use bitcoin::{Address, Network, Script, SigHashType, Transaction, TxIn, TxOut, Txid};
+use bitcoin::{Address, Network, Script, SigHashType, Transaction, TxIn, TxOut};
 
 use crate::bootstrap::*;
 use crate::fields::*;
@@ -326,7 +327,7 @@ impl Field<1> for PartiallySignedTransaction {
     type DeserializeError = psbt::PsbtParseError;
 
     fn deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
-        Ok(PartiallySignedTransaction::from_str(s[0])?)
+        PartiallySignedTransaction::from_str(s[0])
     }
 
     fn serialize(&self) -> [String; 1] {
@@ -496,10 +497,8 @@ impl PsbtInputMsg {
                     MapUpdate::Remove(k) => (k.clone(), psbt_input.partial_sigs.remove(&k)),
                 };
                 match prev {
-                    (k, Some(v)) => {
-                        PsbtInputMsg::ChangePartialSigs(MapUpdate::Set(k.into(), v.into()))
-                    }
-                    (k, None) => PsbtInputMsg::ChangePartialSigs(MapUpdate::Remove(k.into())),
+                    (k, Some(v)) => PsbtInputMsg::ChangePartialSigs(MapUpdate::Set(k, v.into())),
+                    (k, None) => PsbtInputMsg::ChangePartialSigs(MapUpdate::Remove(k)),
                 }
             }
             PsbtInputMsg::ChangeBIP32Derivation(c) => {
@@ -510,10 +509,8 @@ impl PsbtInputMsg {
                     MapUpdate::Remove(k) => (k.clone(), psbt_input.bip32_derivation.remove(&k)),
                 };
                 match prev {
-                    (k, Some(v)) => {
-                        PsbtInputMsg::ChangeBIP32Derivation(MapUpdate::Set(k.into(), v.into()))
-                    }
-                    (k, None) => PsbtInputMsg::ChangeBIP32Derivation(MapUpdate::Remove(k.into())),
+                    (k, Some(v)) => PsbtInputMsg::ChangeBIP32Derivation(MapUpdate::Set(k, v)),
+                    (k, None) => PsbtInputMsg::ChangeBIP32Derivation(MapUpdate::Remove(k)),
                 }
             }
         }
@@ -564,14 +561,14 @@ impl Component for PsbtInput {
             .psbt_input
             .partial_sigs
             .iter()
-            .map(|(k, v)| (k.clone().into(), v.clone().into()))
+            .map(|(k, v)| ((*k).into(), v.clone().into()))
             .collect::<BTreeMap<_, _>>();
         let bip32_derivation = self
             .props
             .psbt_input
             .bip32_derivation
             .iter()
-            .map(|(k, v)| (k.clone().into(), v.clone()))
+            .map(|(k, v)| ((*k).into(), v.clone()))
             .collect::<BTreeMap<_, _>>();
 
         html! {
@@ -636,10 +633,8 @@ impl PsbtOutputMsg {
                     MapUpdate::Remove(k) => (k.clone(), psbt_output.bip32_derivation.remove(&k)),
                 };
                 match prev {
-                    (k, Some(v)) => {
-                        PsbtOutputMsg::ChangeBIP32Derivation(MapUpdate::Set(k.into(), v.into()))
-                    }
-                    (k, None) => PsbtOutputMsg::ChangeBIP32Derivation(MapUpdate::Remove(k.into())),
+                    (k, Some(v)) => PsbtOutputMsg::ChangeBIP32Derivation(MapUpdate::Set(k, v)),
+                    (k, None) => PsbtOutputMsg::ChangeBIP32Derivation(MapUpdate::Remove(k)),
                 }
             }
         }
@@ -683,7 +678,7 @@ impl Component for PsbtOutput {
             .psbt_output
             .bip32_derivation
             .iter()
-            .map(|(k, v)| (k.clone().into(), v.clone()))
+            .map(|(k, v)| ((*k).into(), v.clone()))
             .collect::<BTreeMap<_, _>>();
 
         html! {

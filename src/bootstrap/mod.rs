@@ -1,5 +1,6 @@
+#[allow(unused_imports)]
 use log::*;
-use yew::classes;
+
 use yew::prelude::*;
 
 #[derive(Clone, Properties)]
@@ -60,6 +61,7 @@ macro_rules! wrapper_component {
                     self.props.xl.map(|v| format!("col-xl-{}", v)),
                     self.props.xxl.map(|v| format!("col-xxl-{}", v)),
                 ];
+                #[allow(clippy::redundant_closure_call)]
                 ($render)(self, classes)
             }
         }

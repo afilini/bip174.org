@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::rc::Rc;
 
+#[allow(unused_imports)]
 use log::*;
 
 use yew::prelude::*;
@@ -81,11 +82,11 @@ pub struct SingleFieldPropsBuilder<T, P: Component, X, const N: usize> {
 }
 
 pub trait SingleOrArrayLabels<const N: usize> {
-    fn to_array(self) -> [String; N];
+    fn into_array(self) -> [String; N];
 }
 
 impl<S: AsRef<str>, const N: usize> SingleOrArrayLabels<N> for [S; N] {
-    fn to_array(self) -> [String; N] {
+    fn into_array(self) -> [String; N] {
         self.iter()
             .map(|s| s.as_ref().to_string())
             .collect::<Vec<_>>()
@@ -94,11 +95,13 @@ impl<S: AsRef<str>, const N: usize> SingleOrArrayLabels<N> for [S; N] {
     }
 }
 impl SingleOrArrayLabels<1> for &'_ str {
-    fn to_array(self) -> [String; 1] {
+    fn into_array(self) -> [String; 1] {
         [self.to_string()]
     }
 }
 
+#[allow(unused)]
+#[allow(clippy::wrong_self_convention)]
 impl<T, P, X, const N: usize> SingleFieldPropsBuilder<T, P, X, N>
 where
     T: Field<N> + PartialEq,
@@ -121,7 +124,7 @@ where
     }
 
     pub fn label<S: SingleOrArrayLabels<N>>(mut self, label: S) -> Self {
-        self.label = Some(label.to_array());
+        self.label = Some(label.into_array());
         self
     }
 
@@ -135,7 +138,7 @@ where
         self
     }
 
-    pub fn is_scollable(mut self, is_scrollable: bool) -> Self {
+    pub fn is_scrollable(mut self, is_scrollable: bool) -> Self {
         self.is_scrollable = is_scrollable;
         self
     }
@@ -235,31 +238,28 @@ where
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        match msg {
-            SingleFieldMsg::Change(i, ChangeData::Value(s)) => {
-                self.serialized[i] = s;
+        if let SingleFieldMsg::Change(i, ChangeData::Value(s)) = msg {
+            self.serialized[i] = s;
 
-                match T::deserialize(
-                    self.serialized
-                        .iter()
-                        .map(|s| s.as_str())
-                        .collect::<Vec<_>>()
-                        .try_into()
-                        .unwrap(),
-                ) {
-                    Ok(t) => {
-                        self.error = None;
-                        self.props
-                            .parent
-                            .send_message(<<P as Component>::Message>::build_message(
-                                t,
-                                self.props.tag.clone(),
-                            ));
-                    }
-                    Err(e) => self.error = Some(format!("{:?}", e)),
+            match T::deserialize(
+                self.serialized
+                    .iter()
+                    .map(|s| s.as_str())
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap(),
+            ) {
+                Ok(t) => {
+                    self.error = None;
+                    self.props
+                        .parent
+                        .send_message(<<P as Component>::Message>::build_message(
+                            t,
+                            self.props.tag.clone(),
+                        ));
                 }
+                Err(e) => self.error = Some(format!("{:?}", e)),
             }
-            _ => {}
         }
 
         true
@@ -403,22 +403,18 @@ where
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        match msg {
-            SelectFieldMsg::Change(ChangeData::Select(s)) => {
-                let effective_index =
-                    s.selected_index() - if self.props.allow_empty { 1 } else { 0 };
-                let selected = match effective_index {
-                    x if x < 0 => None,
-                    v => Some(self.props.values[v as usize].clone()),
-                };
-                self.props
-                    .parent
-                    .send_message(<<P as Component>::Message>::build_message(
-                        selected,
-                        self.props.tag.clone(),
-                    ));
-            }
-            _ => {}
+        if let SelectFieldMsg::Change(ChangeData::Select(s)) = msg {
+            let effective_index = s.selected_index() - if self.props.allow_empty { 1 } else { 0 };
+            let selected = match effective_index {
+                x if x < 0 => None,
+                v => Some(self.props.values[v as usize].clone()),
+            };
+            self.props
+                .parent
+                .send_message(<<P as Component>::Message>::build_message(
+                    selected,
+                    self.props.tag.clone(),
+                ));
         }
 
         true
@@ -429,7 +425,7 @@ where
 
         html! {
             <div class="form-floating">
-                <select ref=self.node_ref.clone() class="form-select" onchange=self.link.callback(|e| SelectFieldMsg::Change(e))>
+                <select ref=self.node_ref.clone() class="form-select" onchange=self.link.callback(SelectFieldMsg::Change)>
                     {
                         if self.props.allow_empty {
                             html! { <option selected=selected(None)>{ "Default" }</option> }
@@ -453,7 +449,7 @@ where
                     .selected
                     .as_ref()
                     .map(ToString::to_string)
-                    .unwrap_or("Default".into()),
+                    .unwrap_or_else(|| "Default".into()),
             );
         }
     }
@@ -530,6 +526,8 @@ pub struct MapFieldPropsBuilder<K, V, P: Component, X, const KN: usize, const VN
     value_label: Option<[String; VN]>,
 }
 
+#[allow(unused)]
+#[allow(clippy::wrong_self_convention)]
 impl<K, V, P, X, const KN: usize, const VN: usize> MapFieldPropsBuilder<K, V, P, X, KN, VN>
 where
     K: Field<KN> + PartialEq,
@@ -558,12 +556,12 @@ where
     }
 
     pub fn key_label<S: SingleOrArrayLabels<KN>>(mut self, label: S) -> Self {
-        self.key_label = Some(label.to_array());
+        self.key_label = Some(label.into_array());
         self
     }
 
     pub fn value_label<S: SingleOrArrayLabels<VN>>(mut self, label: S) -> Self {
-        self.value_label = Some(label.to_array());
+        self.value_label = Some(label.into_array());
         self
     }
 
@@ -755,7 +753,7 @@ where
                         { new_value }
                     </Column>
                     <Column xs=1 class="p-0">
-                        <button type="button" class="btn-height-stretch btn btn-outline-secondary" disabled=(self.new_key.is_none() || self.new_value.is_none()) onclick=self.link.callback_once(|_| MapFieldMsg::AddNew)><i class="bi bi-plus"></i></button>
+                        <button type="button" class="btn-height-stretch btn btn-outline-secondary" disabled=(#![allow(unused_parens)] self.new_key.is_none() || self.new_value.is_none()) onclick=self.link.callback_once(|_| MapFieldMsg::AddNew)><i class="bi bi-plus"></i></button>
                     </Column>
                 </Row>
             </div>
