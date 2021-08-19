@@ -42,6 +42,7 @@ impl Component for Navbar {
 
     fn view(&self) -> Html {
         html! {
+            <>
             <nav class="navbar sticky-top navbar-expand-md navbar-dark bg-dark">
                 <div class="container-fluid">
                   <a class="navbar-brand" href="#">{ "BIP 174" }</a>
@@ -60,11 +61,11 @@ impl Component for Navbar {
                         <a class="nav-link active" aria-current="page" href="#">{ "Home" }</a>
                       </li>
                       <li class="nav-item">
-                        <a class="nav-link" href="#">{ "About" }</a>
+                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#aboutModal">{ "About" }</a>
                       </li>
-                      <li class="nav-item">
-                        <a class="nav-link" href="#">{ "Help" }</a>
-                      </li>
+                      // <li class="nav-item">
+                      //   <a class="nav-link" href="#">{ "Help" }</a>
+                      // </li>
                       <li class="nav-item">
                         <a class="nav-link" href="https://github.com/afilini/bip174.org" tabindex="-1">{ "GitHub" }</a>
                       </li>
@@ -92,8 +93,27 @@ impl Component for Navbar {
 
                   </div>
                 </div>
-
             </nav>
+
+            <div class="modal fade" id="aboutModal" tabindex="-1" aria-labelledby="aboutModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="aboutModalLabel">{ "About" }</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>{ "This website is written in Rust and fully open-source: you can find the source code on " }<a href="https://github.com/afilini/bip174.org">{ "GitHub" }</a></p>
+                            <p>{ "If you find a bug please file an issue and we'll try to help you!" }</p>
+                            <p class="text-muted text-center pt-4 fst-italic">{ "Version: " }<span class="font-monospace">{ env!("CARGO_PKG_VERSION") }</span>{ " (" }<span class="font-monospace">{ env!("GIT_STATUS") }</span>{ ")" }</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{ "Close" }</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </>
         }
     }
 }
