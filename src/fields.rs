@@ -433,7 +433,7 @@ where
                             html! {}
                         }
                     }
-                    { for self.props.values.iter().map(|v| html!{ <option selected=selected(Some(&v))>{ v.to_string() }</option> }) }
+                    { for self.props.values.iter().map(|v| html!{ <option selected=selected(Some(v))>{ v.to_string() }</option> }) }
                 </select>
                 { self.props.label.as_ref().map(|l| html! { <label>{ l }</label> }).unwrap_or_default() }
             </div>
@@ -707,6 +707,8 @@ where
     }
 
     fn view(&self) -> Html {
+        #![allow(unused_parens)]
+
         let new_key = (Key, self.new_key.clone()).build_component(
             true,
             None,
@@ -753,7 +755,7 @@ where
                         { new_value }
                     </Column>
                     <Column xs=1 class="p-0">
-                        <button type="button" class="btn-height-stretch btn btn-outline-secondary" disabled=(#![allow(unused_parens)] self.new_key.is_none() || self.new_value.is_none()) onclick=self.link.callback_once(|_| MapFieldMsg::AddNew)><i class="bi bi-plus"></i></button>
+                        <button type="button" class="btn-height-stretch btn btn-outline-secondary" disabled=(self.new_key.is_none() || self.new_value.is_none()) onclick=self.link.callback_once(|_| MapFieldMsg::AddNew)><i class="bi bi-plus"></i></button>
                     </Column>
                 </Row>
             </div>
