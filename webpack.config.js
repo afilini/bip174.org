@@ -1,6 +1,6 @@
 const path = require('path');
 const WasmPackPlugin = require('@wasm-tool/wasm-pack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const distPath = path.resolve(__dirname, "dist");
 module.exports = (env, argv) => {
@@ -13,8 +13,8 @@ module.exports = (env, argv) => {
     entry: './bootstrap.js',
     output: {
       path: distPath,
-      filename: "bip174.js",
-      webassemblyModuleFilename: "bip174.wasm"
+      filename: "bip174.[hash].js",
+      webassemblyModuleFilename: "bip174.[hash].wasm"
     },
     module: {
       rules: [
@@ -37,15 +37,14 @@ module.exports = (env, argv) => {
       ],
     },
     plugins: [
-      new CopyWebpackPlugin({
-        patterns: [
-          { from: './static', to: distPath },
-        ],
+      new HtmlWebpackPlugin({
+        template: 'static/index.html',
+        inject: 'body',
       }),
       new WasmPackPlugin({
         crateDirectory: ".",
         extraArgs: "--no-typescript",
-      })
+      }),
     ],
     watch: argv.mode !== 'production'
   };
