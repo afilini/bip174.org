@@ -200,6 +200,7 @@ where
 }
 
 fn set_height(field: &yew::web_sys::HtmlElement) {
+    field.style().set_property("min-height", "").unwrap();
     field
         .style()
         .set_property("min-height", &format!("{}px", field.scroll_height()))
