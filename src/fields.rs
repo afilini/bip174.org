@@ -320,7 +320,7 @@ where
                     for self.serialized.iter().zip(size.iter().zip(padding.iter())).zip(label.iter()).enumerate().map(|(i, ((v, (s, p)), l))| html! {
                         <Column xs=*s class=classes!(is_invalid, p).to_string()>
                             <div class="form-floating">
-                                <textarea ref=self.node_ref.clone() oninput=resize_cb.clone() class=classes!("form-control", is_invalid, scrollable_class) value={ v.clone() } onchange=self.link.callback(move |e| SingleFieldMsg::Change(i, e))></textarea>
+                                <textarea ref=self.node_ref.clone() oninput=resize_cb.clone() class=classes!("form-control", is_invalid, scrollable_class) value={ v.clone() } onchange=self.link.callback(move |e| SingleFieldMsg::Change(i, e)) spellcheck="false"></textarea>
                                 { l.map(|l| html! { <label>{ l }</label> }).unwrap_or_default() }
                             </div>
                         </Column>
