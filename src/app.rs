@@ -9,9 +9,14 @@ use std::str::FromStr;
 use log::*;
 use yew::prelude::*;
 
-use bitcoin::util::bip32;
-use bitcoin::util::psbt::{self, PartiallySignedTransaction};
-use bitcoin::{Address, Network, Script, SigHashType, Transaction, TxIn, TxOut};
+use bitcoin::{
+    bip32,
+    ecdsa::Signature,
+    psbt::{self, PsbtSighashType},
+    secp256k1,
+    sighash::EcdsaSighashType,
+    Address, Network, ScriptBuf, Transaction, TxIn, TxOut, Witness,
+};
 
 use crate::bootstrap::*;
 use crate::fields::*;
@@ -72,9 +77,9 @@ impl Component for App {
 
         match msg {
             AppMsg::SetNetwork(network) => self.network = network,
-            AppMsg::SetPsbt(psbt) => send_psbt_message(PsbtMessage::ChangePsbt(
-                PartiallySignedTransaction::from_str(psbt).ok(),
-            )),
+            AppMsg::SetPsbt(psbt) => {
+                send_psbt_message(PsbtMessage::ChangePsbt(psbt::Psbt::from_str(psbt).ok()))
+            }
             AppMsg::Undo => send_psbt_message(PsbtMessage::Undo),
             AppMsg::Redo => send_psbt_message(PsbtMessage::Redo),
         }
@@ -116,7 +121,7 @@ pub struct Psbt {
     link: ComponentLink<Self>,
     props: PsbtProps,
 
-    psbt: Option<PartiallySignedTransaction>,
+    psbt: Option<psbt::Psbt>,
     history: History,
 }
 
@@ -128,7 +133,7 @@ pub struct PsbtProps {
 
 #[derive(Clone, Debug)]
 pub enum PsbtMessage {
-    ChangePsbt(Option<PartiallySignedTransaction>),
+    ChangePsbt(Option<psbt::Psbt>),
     ChangeInput(usize, PsbtInputMsg),
     ChangeOutput(usize, PsbtOutputMsg),
 
@@ -138,14 +143,14 @@ pub enum PsbtMessage {
     None,
 }
 
-impl ParentMessage<Option<PartiallySignedTransaction>> for PsbtMessage {
-    fn build_message(data: Option<PartiallySignedTransaction>, _tag: Option<()>) -> Self {
+impl ParentMessage<Option<psbt::Psbt>> for PsbtMessage {
+    fn build_message(data: Option<psbt::Psbt>, _tag: Option<()>) -> Self {
         PsbtMessage::ChangePsbt(data)
     }
 }
 
 impl PsbtMessage {
-    pub fn apply_to(self, psbt: &mut Option<PartiallySignedTransaction>) -> PsbtMessage {
+    pub fn apply_to(self, psbt: &mut Option<psbt::Psbt>) -> PsbtMessage {
         match self {
             PsbtMessage::ChangePsbt(new_psbt) => {
                 let old = psbt.take();
@@ -204,7 +209,7 @@ impl Component for Psbt {
     }
 
     fn view(&self) -> Html {
-        type SingleFieldPsbt = SingleField<Option<PartiallySignedTransaction>, Psbt, (), 1>;
+        type SingleFieldPsbt = SingleField<Option<psbt::Psbt>, Psbt, (), 1>;
 
         html! {
             <Container class="p-0">
@@ -220,7 +225,7 @@ impl Component for Psbt {
                                 <Column xs=12 md=6 class="order-first">
                                     <h2 class="my-3">{ "Inputs" }</h2>
                                     {
-                                        self.psbt.as_ref().map(|psbt| html! { for psbt.inputs.iter().zip(psbt.global.unsigned_tx.input.iter()).enumerate().map(|(index, (psbt_input, input))| html!{ <PsbtInput index=index input=input.clone() psbt_input=psbt_input.clone() network=self.props.network parent=self.link.clone() /> }) }).unwrap_or_default()
+                                        self.psbt.as_ref().map(|psbt| html! { for psbt.inputs.iter().zip(psbt.unsigned_tx.input.iter()).enumerate().map(|(index, (psbt_input, input))| html!{ <PsbtInput index=index input=input.clone() psbt_input=psbt_input.clone() network=self.props.network parent=self.link.clone() /> }) }).unwrap_or_default()
                                     }
                                 </Column>
 
@@ -236,7 +241,7 @@ impl Component for Psbt {
                                 <Column xs=12 md=5 class="order-last">
                                     <h2 class="my-3">{ "Outputs" }</h2>
                                     {
-                                        self.psbt.as_ref().map(|psbt | html! { for psbt.outputs.iter().zip(psbt.global.unsigned_tx.output.iter()).enumerate().map(|(index, (psbt_output, output))| html!{ <PsbtOutput index=index output=output.clone() psbt_output=psbt_output.clone() network=self.props.network parent=self.link.clone() /> }) }).unwrap_or_default()
+                                        self.psbt.as_ref().map(|psbt | html! { for psbt.outputs.iter().zip(psbt.unsigned_tx.output.iter()).enumerate().map(|(index, (psbt_output, output))| html!{ <PsbtOutput index=index output=output.clone() psbt_output=psbt_output.clone() network=self.props.network parent=self.link.clone() /> }) }).unwrap_or_default()
                                     }
                                 </Column>
                             </div>
@@ -251,27 +256,27 @@ impl Component for Psbt {
 pub trait Field<const N: usize>: Clone + Sized + std::fmt::Debug {
     type DeserializeError: std::fmt::Debug;
 
-    fn serialize(&self) -> [String; N];
-    fn deserialize(s: [&str; N]) -> Result<Self, Self::DeserializeError>;
+    fn bip174_serialize(&self) -> [String; N];
+    fn bip174_deserialize(s: [&str; N]) -> Result<Self, Self::DeserializeError>;
 }
 
 impl<T: Field<N>, const N: usize> Field<N> for Option<T> {
     type DeserializeError = <T as Field<N>>::DeserializeError;
 
-    fn serialize(&self) -> [String; N] {
+    fn bip174_serialize(&self) -> [String; N] {
         match self {
             None => {
                 let v = vec![String::new(); N];
                 v.try_into().unwrap()
             }
-            Some(s) => s.serialize(),
+            Some(s) => s.bip174_serialize(),
         }
     }
-    fn deserialize(s: [&str; N]) -> Result<Self, Self::DeserializeError> {
+    fn bip174_deserialize(s: [&str; N]) -> Result<Self, Self::DeserializeError> {
         if s.iter().any(|s| s.is_empty()) {
             Ok(None)
         } else {
-            Ok(Some(T::deserialize(s)?))
+            Ok(Some(T::bip174_deserialize(s)?))
         }
     }
 }
@@ -281,7 +286,7 @@ macro_rules! impl_hex_serialize_field {
         impl Field<1> for $type {
             type DeserializeError = ParseError;
 
-            fn deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
+            fn bip174_deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
                 use bitcoin::consensus::encode::deserialize;
                 use bitcoin::hashes::hex::FromHex;
 
@@ -289,11 +294,8 @@ macro_rules! impl_hex_serialize_field {
                 Ok(deserialize(&data)?)
             }
 
-            fn serialize(&self) -> [String; 1] {
-                use bitcoin::consensus::encode::serialize;
-                use bitcoin::hashes::hex::ToHex;
-
-                [serialize(&self).to_hex()]
+            fn bip174_serialize(&self) -> [String; 1] {
+                [bitcoin::consensus::encode::serialize_hex(&self)]
             }
         }
     };
@@ -301,68 +303,79 @@ macro_rules! impl_hex_serialize_field {
 impl_hex_serialize_field!(TxOut);
 impl_hex_serialize_field!(Transaction);
 impl_hex_serialize_field!(Vec<Vec<u8>>);
+impl_hex_serialize_field!(Vec<u8>);
+impl_hex_serialize_field!(Witness);
 
 impl Field<1> for bitcoin::PublicKey {
     type DeserializeError = ParseError;
 
-    fn deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
+    fn bip174_deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
         use bitcoin::hashes::hex::FromHex;
         let data = Vec::<u8>::from_hex(s[0])?;
         Ok(bitcoin::PublicKey::from_slice(&data)?)
     }
 
-    fn serialize(&self) -> [String; 1] {
-        use bitcoin::hashes::hex::ToHex;
-        [self.to_bytes().to_hex()]
+    fn bip174_serialize(&self) -> [String; 1] {
+        [bitcoin::consensus::encode::serialize_hex(&self.to_bytes())]
     }
 }
 
-impl Field<1> for Script {
+impl Field<1> for secp256k1::PublicKey {
     type DeserializeError = ParseError;
 
-    fn deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
+    fn bip174_deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
         use bitcoin::hashes::hex::FromHex;
-        Ok(Script::from_hex(s[0])?)
+        let data = Vec::<u8>::from_hex(s[0])?;
+        Ok(secp256k1::PublicKey::from_slice(&data)?)
     }
 
-    fn serialize(&self) -> [String; 1] {
-        use bitcoin::hashes::hex::ToHex;
-        [self.to_hex()]
+    fn bip174_serialize(&self) -> [String; 1] {
+        [format!("{:x}", self)]
     }
 }
 
-impl Field<1> for Vec<u8> {
+impl Field<1> for ScriptBuf {
     type DeserializeError = ParseError;
 
-    fn deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
-        use bitcoin::hashes::hex::FromHex;
-
-        Ok(Vec::<u8>::from_hex(s[0])?)
+    fn bip174_deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
+        Ok(ScriptBuf::from_hex(s[0])?)
     }
 
-    fn serialize(&self) -> [String; 1] {
-        use bitcoin::hashes::hex::ToHex;
-
-        [self.to_hex()]
+    fn bip174_serialize(&self) -> [String; 1] {
+        [self.as_script().to_hex_string()]
     }
 }
 
-impl Field<1> for PartiallySignedTransaction {
+impl Field<1> for Signature {
+    type DeserializeError = ParseError;
+
+    fn bip174_deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
+        use bitcoin::hashes::hex::FromHex;
+        let data = Vec::<u8>::from_hex(s[0])?;
+        Ok(Signature::from_slice(&data)?)
+    }
+
+    fn bip174_serialize(&self) -> [String; 1] {
+        [format!("{:x}", &self.serialize())]
+    }
+}
+
+impl Field<1> for psbt::Psbt {
     type DeserializeError = psbt::PsbtParseError;
 
-    fn deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
-        PartiallySignedTransaction::from_str(s[0])
+    fn bip174_deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
+        psbt::Psbt::from_str(s[0])
     }
 
-    fn serialize(&self) -> [String; 1] {
+    fn bip174_serialize(&self) -> [String; 1] {
         [self.to_string()]
     }
 }
 
-impl Field<2> for bitcoin::util::bip32::KeySource {
+impl Field<2> for bitcoin::bip32::KeySource {
     type DeserializeError = ParseError;
 
-    fn deserialize(s: [&str; 2]) -> Result<Self, Self::DeserializeError> {
+    fn bip174_deserialize(s: [&str; 2]) -> Result<Self, Self::DeserializeError> {
         use bitcoin::hashes::hex::FromHex;
 
         let fingerprint = FromHex::from_hex(s[0])?;
@@ -371,10 +384,8 @@ impl Field<2> for bitcoin::util::bip32::KeySource {
         Ok((fingerprint, path))
     }
 
-    fn serialize(&self) -> [String; 2] {
-        use bitcoin::hashes::hex::ToHex;
-
-        [self.0.to_hex(), self.1.to_string()]
+    fn bip174_serialize(&self) -> [String; 2] {
+        [format!("{:x}", self.0), self.1.to_string()]
     }
 }
 
@@ -404,11 +415,11 @@ macro_rules! declare_ty_wrapper {
         impl Field<1> for $name {
             type DeserializeError = ParseError;
 
-            fn serialize(&self) -> [String; 1] {
-                self.0.serialize()
+            fn bip174_serialize(&self) -> [String; 1] {
+                self.0.bip174_serialize()
             }
-            fn deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
-                Ok(<$wrap>::deserialize(s)?.into())
+            fn bip174_deserialize(s: [&str; 1]) -> Result<Self, Self::DeserializeError> {
+                Ok(<$wrap>::bip174_deserialize(s)?.into())
             }
         }
     };
@@ -416,12 +427,14 @@ macro_rules! declare_ty_wrapper {
 
 declare_ty_wrapper!(WitnessUtxo, Option<TxOut>);
 declare_ty_wrapper!(NonWitnessUtxo, Option<Transaction>);
+declare_ty_wrapper!(SecpPublicKeyWrapper, secp256k1::PublicKey, with_ord,);
 declare_ty_wrapper!(PublicKeyWrapper, bitcoin::PublicKey, with_ord,);
 declare_ty_wrapper!(BytesWrapper, Vec<u8>);
-declare_ty_wrapper!(RedeemScript, Option<Script>);
-declare_ty_wrapper!(WitnessScript, Option<Script>);
-declare_ty_wrapper!(FinalScript, Option<Script>);
-declare_ty_wrapper!(FinalWitness, Option<Vec<Vec<u8>>>);
+declare_ty_wrapper!(RedeemScript, Option<ScriptBuf>);
+declare_ty_wrapper!(WitnessScript, Option<ScriptBuf>);
+declare_ty_wrapper!(FinalScript, Option<ScriptBuf>);
+declare_ty_wrapper!(FinalWitness, Option<Witness>);
+declare_ty_wrapper!(FinalSignature, Signature);
 
 fn build_row(item: Html) -> Html {
     html! {
@@ -446,15 +459,15 @@ pub struct PsbtInputProps {
 #[derive(Debug, Clone)]
 #[allow(clippy::enum_variant_names)]
 pub enum PsbtInputMsg {
-    ChangeSigHash(Option<SigHashType>),
+    ChangeSigHash(Option<PsbtSighashType>),
     ChangeWitnessUtxo(WitnessUtxo),
     ChangeNonWitnessUtxo(NonWitnessUtxo),
     ChangeRedeemScript(RedeemScript),
     ChangeWitnessScript(WitnessScript),
     ChangeFinalScript(FinalScript),
     ChangeFinalWitness(FinalWitness),
-    ChangePartialSigs(MapUpdate<PublicKeyWrapper, BytesWrapper>),
-    ChangeBIP32Derivation(MapUpdate<PublicKeyWrapper, bip32::KeySource>),
+    ChangePartialSigs(MapUpdate<PublicKeyWrapper, FinalSignature>),
+    ChangeBIP32Derivation(MapUpdate<SecpPublicKeyWrapper, bip32::KeySource>),
 }
 macro_rules! impl_parent_message {
     ($enum:ident, $variant:ident, $type:ty) => {
@@ -465,15 +478,15 @@ macro_rules! impl_parent_message {
         }
     };
 }
-impl_parent_message!(PsbtInputMsg, ChangeSigHash, Option<SigHashType>);
+impl_parent_message!(PsbtInputMsg, ChangeSigHash, Option<PsbtSighashType>);
 impl_parent_message!(PsbtInputMsg, ChangeWitnessUtxo, WitnessUtxo);
 impl_parent_message!(PsbtInputMsg, ChangeNonWitnessUtxo, NonWitnessUtxo);
 impl_parent_message!(PsbtInputMsg, ChangeRedeemScript, RedeemScript);
 impl_parent_message!(PsbtInputMsg, ChangeWitnessScript, WitnessScript);
 impl_parent_message!(PsbtInputMsg, ChangeFinalScript, FinalScript);
 impl_parent_message!(PsbtInputMsg, ChangeFinalWitness, FinalWitness);
-impl_parent_message!(PsbtInputMsg, ChangePartialSigs, MapUpdate<PublicKeyWrapper, BytesWrapper>);
-impl_parent_message!(PsbtInputMsg, ChangeBIP32Derivation, MapUpdate<PublicKeyWrapper, bip32::KeySource>);
+impl_parent_message!(PsbtInputMsg, ChangePartialSigs, MapUpdate<PublicKeyWrapper, FinalSignature>);
+impl_parent_message!(PsbtInputMsg, ChangeBIP32Derivation, MapUpdate<SecpPublicKeyWrapper, bip32::KeySource>);
 
 macro_rules! set_and_return {
     ($field:expr, $val:expr) => {{
@@ -576,17 +589,17 @@ impl Component for PsbtInput {
         type SingleFieldWitnessScript = SingleField<WitnessScript, PsbtInput, (), 1>;
         type SingleFieldFinalScript = SingleField<FinalScript, PsbtInput, (), 1>;
         type SingleFieldFinalWitness = SingleField<FinalWitness, PsbtInput, (), 1>;
-        type SelectFieldSigHash = SelectField<SigHashType, PsbtInput, ()>;
-        type MapFieldPartialSigs = MapField<PublicKeyWrapper, BytesWrapper, PsbtInput, (), 1, 1>;
+        type SelectFieldSigHash = SelectField<PsbtSighashType, PsbtInput, ()>;
+        type MapFieldPartialSigs = MapField<PublicKeyWrapper, FinalSignature, PsbtInput, (), 1, 1>;
         type MapFieldBIP32Derivation =
-            MapField<PublicKeyWrapper, bip32::KeySource, PsbtInput, (), 1, 2>;
+            MapField<SecpPublicKeyWrapper, bip32::KeySource, PsbtInput, (), 1, 2>;
 
         let partial_sigs = self
             .props
             .psbt_input
             .partial_sigs
             .iter()
-            .map(|(k, v)| ((*k).into(), v.clone().into()))
+            .map(|(k, v)| ((*k).into(), (*v).into()))
             .collect::<BTreeMap<_, _>>();
         let bip32_derivation = self
             .props
@@ -608,7 +621,7 @@ impl Component for PsbtInput {
                 { build_row(html! { <SingleFieldNonWitnessUtxo label="Non Witness UTXO" value=NonWitnessUtxo(self.props.psbt_input.non_witness_utxo.clone()) parent=self.link.clone() /> }) }
                 { build_row(html! { <MapFieldPartialSigs label="Partial Signatures" key_label="Public Key" value_label="Signature" map=partial_sigs parent=self.link.clone() /> }) }
                 { build_row(html! { <MapFieldBIP32Derivation label="BIP32 Derivation" key_label="Public Key" value_label=["Fingerprint", "Path"] map=bip32_derivation parent=self.link.clone() /> }) }
-                { build_row(html! { <SelectFieldSigHash label="Sighash Type".to_string() allow_empty=true selected=self.props.psbt_input.sighash_type values=vec![SigHashType::All, SigHashType::None, SigHashType::Single, SigHashType::AllPlusAnyoneCanPay, SigHashType::NonePlusAnyoneCanPay, SigHashType::SinglePlusAnyoneCanPay] parent=self.link.clone() /> }) }
+                { build_row(html! { <SelectFieldSigHash label="Sighash Type".to_string() allow_empty=true selected=self.props.psbt_input.sighash_type values=vec![EcdsaSighashType::All.into(), EcdsaSighashType::None.into(), EcdsaSighashType::Single.into(), EcdsaSighashType::AllPlusAnyoneCanPay.into(), EcdsaSighashType::NonePlusAnyoneCanPay.into(), EcdsaSighashType::SinglePlusAnyoneCanPay.into()] parent=self.link.clone() /> }) }
                 { build_row(html! { <SingleFieldFinalScript label="Final Script Sig" value=FinalScript(self.props.psbt_input.final_script_sig.clone()) parent=self.link.clone() /> }) }
                 { build_row(html! { <SingleFieldFinalWitness label="Final Script Witness" value=FinalWitness(self.props.psbt_input.final_script_witness.clone()) parent=self.link.clone() /> }) }
                 { build_row(html! { <SingleFieldRedeemScript label="Redeem Script" value=RedeemScript(self.props.psbt_input.redeem_script.clone()) parent=self.link.clone() /> }) }
@@ -633,11 +646,11 @@ pub struct PsbtOutputProps {
 pub enum PsbtOutputMsg {
     ChangeRedeemScript(RedeemScript),
     ChangeWitnessScript(WitnessScript),
-    ChangeBIP32Derivation(MapUpdate<PublicKeyWrapper, bip32::KeySource>),
+    ChangeBIP32Derivation(MapUpdate<SecpPublicKeyWrapper, bip32::KeySource>),
 }
 impl_parent_message!(PsbtOutputMsg, ChangeRedeemScript, RedeemScript);
 impl_parent_message!(PsbtOutputMsg, ChangeWitnessScript, WitnessScript);
-impl_parent_message!(PsbtOutputMsg, ChangeBIP32Derivation, MapUpdate<PublicKeyWrapper, bip32::KeySource>);
+impl_parent_message!(PsbtOutputMsg, ChangeBIP32Derivation, MapUpdate<SecpPublicKeyWrapper, bip32::KeySource>);
 
 impl PsbtOutputMsg {
     fn apply_to(self, psbt_output: &mut psbt::Output) -> PsbtOutputMsg {
@@ -697,7 +710,7 @@ impl Component for PsbtOutput {
         type SingleFieldRedeemScript = SingleField<RedeemScript, PsbtOutput, (), 1>;
         type SingleFieldWitnessScript = SingleField<WitnessScript, PsbtOutput, (), 1>;
         type MapFieldBIP32Derivation =
-            MapField<PublicKeyWrapper, bip32::KeySource, PsbtOutput, (), 1, 2>;
+            MapField<SecpPublicKeyWrapper, bip32::KeySource, PsbtOutput, (), 1, 2>;
 
         let bip32_derivation = self
             .props
@@ -711,7 +724,7 @@ impl Component for PsbtOutput {
             <div class="card mb-3 pb-2 position-relative">
                 <div class="card-header mb-2 d-flex flex-wrap">
                     <span class="col-1 fw-light">{ format!("#{}", self.props.index) }</span>
-                    <span class="col-11">{ Address::from_script(&self.props.output.script_pubkey, self.props.network).map(|a| a.to_string()).unwrap_or_else(|| self.props.output.script_pubkey.to_string()) }</span>
+                    <span class="col-11">{ Address::from_script(&self.props.output.script_pubkey, self.props.network).map(|a| a.to_string()).unwrap_or_else(|_| self.props.output.script_pubkey.to_string()) }</span>
                     // <span class="offset-1 col-11 offset-md-0 col-md-3 text-end">{ "??? BTC" }</span>
                 </div>
 
@@ -725,14 +738,26 @@ impl Component for PsbtOutput {
 
 #[derive(Debug)]
 pub enum ParseError {
-    Hex(bitcoin::hashes::hex::Error),
+    Hex(HexError),
     Encode(bitcoin::consensus::encode::Error),
-    Key(bitcoin::util::key::Error),
-    BIP32(bitcoin::util::bip32::Error),
+    Key(bitcoin::key::Error),
+    Secp(secp256k1::Error),
+    BIP32(bitcoin::bip32::Error),
+    Ecdsa(bitcoin::ecdsa::Error),
 }
-impl From<bitcoin::hashes::hex::Error> for ParseError {
-    fn from(e: bitcoin::hashes::hex::Error) -> Self {
-        ParseError::Hex(e)
+#[derive(Debug)]
+pub enum HexError {
+    Bytes(bitcoin::hex::HexToBytesError),
+    Array(bitcoin::hex::HexToArrayError),
+}
+impl From<bitcoin::hashes::hex::HexToArrayError> for ParseError {
+    fn from(e: bitcoin::hashes::hex::HexToArrayError) -> Self {
+        ParseError::Hex(HexError::Array(e))
+    }
+}
+impl From<bitcoin::hashes::hex::HexToBytesError> for ParseError {
+    fn from(e: bitcoin::hashes::hex::HexToBytesError) -> Self {
+        ParseError::Hex(HexError::Bytes(e))
     }
 }
 impl From<bitcoin::consensus::encode::Error> for ParseError {
@@ -740,13 +765,23 @@ impl From<bitcoin::consensus::encode::Error> for ParseError {
         ParseError::Encode(e)
     }
 }
-impl From<bitcoin::util::key::Error> for ParseError {
-    fn from(e: bitcoin::util::key::Error) -> Self {
+impl From<bitcoin::key::Error> for ParseError {
+    fn from(e: bitcoin::key::Error) -> Self {
         ParseError::Key(e)
     }
 }
-impl From<bitcoin::util::bip32::Error> for ParseError {
-    fn from(e: bitcoin::util::bip32::Error) -> Self {
+impl From<secp256k1::Error> for ParseError {
+    fn from(e: secp256k1::Error) -> Self {
+        ParseError::Secp(e)
+    }
+}
+impl From<bitcoin::bip32::Error> for ParseError {
+    fn from(e: bitcoin::bip32::Error) -> Self {
         ParseError::BIP32(e)
+    }
+}
+impl From<bitcoin::ecdsa::Error> for ParseError {
+    fn from(e: bitcoin::ecdsa::Error) -> Self {
+        ParseError::Ecdsa(e)
     }
 }

@@ -1,4 +1,4 @@
-use bitcoin::util::psbt;
+use bitcoin::psbt;
 
 use crate::app::*;
 
@@ -15,7 +15,7 @@ impl History {
         self.position += 1;
     }
 
-    pub fn undo(&mut self, psbt: &mut Option<psbt::PartiallySignedTransaction>) -> bool {
+    pub fn undo(&mut self, psbt: &mut Option<psbt::Psbt>) -> bool {
         let prev_position = match self.position {
             0 => return false,
             x => x - 1,
@@ -28,7 +28,7 @@ impl History {
         true
     }
 
-    pub fn redo(&mut self, psbt: &mut Option<psbt::PartiallySignedTransaction>) -> bool {
+    pub fn redo(&mut self, psbt: &mut Option<psbt::Psbt>) -> bool {
         if let Some(action) = self.items.get(self.position) {
             self.items[self.position] = action.clone().apply_to(psbt);
             self.position += 1;

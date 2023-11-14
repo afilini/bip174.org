@@ -16,7 +16,7 @@ wasm-bindgen = "0.2.75"
 wasm-logger = "0.2"
 wee_alloc = "0.4.5"
 yew = "0.18"
-bitcoin = { version = "0.27", features = ["base64"] }
+bitcoin = { version = "0.31.0", features = ["base64"] }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

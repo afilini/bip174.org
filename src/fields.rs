@@ -220,7 +220,7 @@ where
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         SingleField {
             link,
-            serialized: props.value.serialize(),
+            serialized: props.value.bip174_serialize(),
             props,
             error: None,
             node_ref: NodeRef::default(),
@@ -230,7 +230,7 @@ where
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
         if props.value != self.props.value {
-            self.serialized = props.value.serialize();
+            self.serialized = props.value.bip174_serialize();
             self.error = None;
         }
 
@@ -242,7 +242,7 @@ where
         if let SingleFieldMsg::Change(i, ChangeData::Value(s)) = msg {
             self.serialized[i] = s;
 
-            match T::deserialize(
+            match T::bip174_deserialize(
                 self.serialized
                     .iter()
                     .map(|s| s.as_str())
@@ -482,12 +482,12 @@ macro_rules! impl_marker {
         impl<F: Field<N>, const N: usize> Field<N> for ($type, F) {
             type DeserializeError = <F as Field<N>>::DeserializeError;
 
-            fn deserialize(s: [&str; N]) -> Result<Self, Self::DeserializeError> {
-                Ok(($type, F::deserialize(s)?))
+            fn bip174_deserialize(s: [&str; N]) -> Result<Self, Self::DeserializeError> {
+                Ok(($type, F::bip174_deserialize(s)?))
             }
 
-            fn serialize(&self) -> [String; N] {
-                self.1.serialize()
+            fn bip174_serialize(&self) -> [String; N] {
+                self.1.bip174_serialize()
             }
         }
     };
